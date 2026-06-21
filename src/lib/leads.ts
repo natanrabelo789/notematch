@@ -18,6 +18,39 @@ function getSupabaseAdmin(): SupabaseClient | null {
   return supabaseAdmin;
 }
 
+export async function checkLeadStorage(): Promise<{
+  configured: boolean;
+  urlPresent: boolean;
+  serviceKeyPresent: boolean;
+  canConnect: boolean;
+  error?: string;
+}> {
+  const urlPresent = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKeyPresent = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const configured = urlPresent && serviceKeyPresent;
+
+  if (!configured) {
+    return { configured, urlPresent, serviceKeyPresent, canConnect: false };
+  }
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) {
+    return { configured, urlPresent, serviceKeyPresent, canConnect: false };
+  }
+
+  const { error } = await supabase
+    .from("leads")
+    .select("id", { count: "exact", head: true });
+
+  return {
+    configured,
+    urlPresent,
+    serviceKeyPresent,
+    canConnect: !error,
+    error: error?.message,
+  };
+}
+
 export async function saveLead(lead: LeadData): Promise<{
   saved: boolean;
   mode: "supabase" | "console";
@@ -25,7 +58,10 @@ export async function saveLead(lead: LeadData): Promise<{
   const supabase = getSupabaseAdmin();
 
   if (!supabase) {
-    console.log("[NoteMatch] Lead (dev mode):", lead);
+    console.warn(
+      "[NoteMatch] Supabase not configured (missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY). Lead logged to console only:",
+      lead
+    );
     return { saved: true, mode: "console" };
   }
 

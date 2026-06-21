@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
-import { isValidEmail, saveLead } from "@/lib/leads";
+import { checkLeadStorage, isValidEmail, saveLead } from "@/lib/leads";
 import type { LeadData } from "@/lib/types";
+
+export async function GET() {
+  const status = await checkLeadStorage();
+  return NextResponse.json(status);
+}
 
 export async function POST(request: Request) {
   try {
@@ -35,7 +40,8 @@ export async function POST(request: Request) {
     const result = await saveLead(lead);
 
     return NextResponse.json(result);
-  } catch {
+  } catch (error) {
+    console.error("[NoteMatch] /api/leads failed:", error);
     return NextResponse.json(
       { error: "Erro ao salvar lead." },
       { status: 500 }

@@ -112,13 +112,21 @@ export default function ChatWidget({
 
   async function saveLeadToApi(data: LeadData) {
     try {
-      await fetch("/api/leads", {
+      const res = await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...data, accessories }),
       });
+      const result = await res.json().catch(() => null);
+      if (!res.ok) {
+        console.error("[NoteMatch] Lead save failed:", res.status, result);
+      } else if (result?.mode === "console") {
+        console.warn(
+          "[NoteMatch] Lead was NOT persisted to Supabase (running in console mode). Check NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY."
+        );
+      }
     } catch (error) {
-      console.error("Failed to save lead:", error);
+      console.error("[NoteMatch] Failed to reach /api/leads:", error);
     }
   }
 
