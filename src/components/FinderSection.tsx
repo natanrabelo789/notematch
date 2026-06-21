@@ -64,8 +64,8 @@ export default function FinderSection() {
       return;
     }
 
-    if (compareSelection.length >= 4) {
-      alert("Você pode comparar no máximo 4 notebooks por vez.");
+    if (compareSelection.length >= 2) {
+      alert("Você pode comparar até 2 modelos por vez para entender as diferenças.");
       return;
     }
 
@@ -104,7 +104,7 @@ export default function FinderSection() {
         <div className="loading active">
           <div className="spinner" />
           <p>
-            Analisando suas necessidades e buscando as melhores opções...
+            Analisando o seu perfil e selecionando modelos compatíveis...
           </p>
         </div>
       )}

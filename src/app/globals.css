@@ -376,6 +376,15 @@ select.form-control {
   margin-top: var(--space-16);
 }
 
+.result-fit {
+  margin-top: var(--space-16);
+  padding: var(--space-12) var(--space-16);
+  border-left: 3px solid var(--color-primary);
+  background: var(--color-secondary);
+  border-radius: var(--radius-base);
+  font-size: 0.95rem;
+}
+
 .recommendation-reason h4 {
   color: var(--color-primary);
   margin-bottom: var(--space-8);

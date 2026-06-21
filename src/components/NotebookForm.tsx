@@ -144,6 +144,9 @@ export default function NotebookForm({ onSubmit, loading }: NotebookFormProps) {
           value={usage}
           onChange={(e) => setUsage(e.target.value)}
         />
+        <p className="budget-help">
+          Seu perfil de uso pesa mais que a marca na recomendação final.
+        </p>
       </div>
 
       <div className="form-group">
@@ -216,7 +219,7 @@ export default function NotebookForm({ onSubmit, loading }: NotebookFormProps) {
         className="btn btn-primary btn-full"
         disabled={loading}
       >
-        {loading ? "Buscando..." : "Encontrar Notebook Ideal"}
+        {loading ? "Analisando seu perfil..." : "Ver recomendações para meu perfil"}
       </button>
     </form>
   );

@@ -1,4 +1,4 @@
-import type { Notebook } from "./types";
+import type { Notebook, NotebookCategory } from "./types";
 
 export const NOTEBOOK_CATALOG: Notebook[] = [
   {
@@ -240,3 +240,64 @@ export const GIFT_ACCESSORIES = [
   "Suporte para notebook",
   "Cadeira gamer",
 ] as const;
+
+interface CategoryProfile {
+  label: string;
+  idealFor: string;
+  watchOut: string;
+}
+
+export const CATEGORY_PROFILE: Record<NotebookCategory, CategoryProfile> = {
+  gaming: {
+    label: "Jogos",
+    idealFor: "jogos, streaming e tarefas que exigem GPU dedicada",
+    watchOut: "portabilidade máxima e longa autonomia de bateria",
+  },
+  design: {
+    label: "Design e edição",
+    idealFor: "edição de imagem e vídeo, ilustração e trabalho criativo",
+    watchOut: "orçamentos muito baixos — exige mais investimento em GPU e tela",
+  },
+  engineering: {
+    label: "Engenharia",
+    idealFor: "CAD, simulação e softwares técnicos pesados",
+    watchOut: "quem prioriza leveza e bateria acima de desempenho bruto",
+  },
+  programming: {
+    label: "Programação",
+    idealFor: "desenvolvimento, multitarefa e ambientes de virtualização",
+    watchOut: "jogos pesados ou edição 3D intensiva",
+  },
+  student: {
+    label: "Estudos",
+    idealFor: "estudos, pesquisa, Office e multitarefa do dia a dia",
+    watchOut: "jogos AAA e cargas gráficas pesadas",
+  },
+  basic: {
+    label: "Uso geral",
+    idealFor: "navegação, streaming, Office e estudos leves",
+    watchOut: "jogos pesados, edição 3D ou renderização profissional",
+  },
+};
+
+const CATEGORY_PRIORITY: NotebookCategory[] = [
+  "gaming",
+  "design",
+  "engineering",
+  "programming",
+  "student",
+  "basic",
+];
+
+export function getPrimaryCategory(
+  categories: NotebookCategory[]
+): NotebookCategory {
+  return (
+    CATEGORY_PRIORITY.find((category) => categories.includes(category)) ??
+    "basic"
+  );
+}
+
+export function getNotebookProfile(notebook: Notebook): CategoryProfile {
+  return CATEGORY_PROFILE[getPrimaryCategory(notebook.categories)];
+}

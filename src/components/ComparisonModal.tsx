@@ -1,5 +1,6 @@
 "use client";
 
+import { getNotebookProfile } from "@/lib/catalog";
 import type { ComparedNotebook } from "@/lib/types";
 import { useState } from "react";
 
@@ -41,7 +42,7 @@ export default function ComparisonModal({
       <div className="comparison-content">
         <div className="comparison-header">
           <h2 id="comparison-title" style={{ margin: 0 }}>
-            Comparação de Notebooks
+            Diferenças entre os perfis recomendados
           </h2>
           <button
             type="button"
@@ -73,12 +74,23 @@ export default function ComparisonModal({
                     <th key={nb.index}>
                       <div className="comparison-product-name">{nb.name}</div>
                       <div className="comparison-product-brand">{nb.brand}</div>
-                      <div className="comparison-product-price">{nb.price}</div>
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
+                <tr className="row-different">
+                  <td>Melhor para</td>
+                  {notebooks.map((nb) => (
+                    <td key={nb.index}>{getNotebookProfile(nb).idealFor}</td>
+                  ))}
+                </tr>
+                <tr className="row-different">
+                  <td>Menos indicado para</td>
+                  {notebooks.map((nb) => (
+                    <td key={nb.index}>{getNotebookProfile(nb).watchOut}</td>
+                  ))}
+                </tr>
                 {SPECS.map((spec) => {
                   const values = notebooks.map((nb) => nb[spec.key]);
                   const isDifferent = new Set(values).size > 1;

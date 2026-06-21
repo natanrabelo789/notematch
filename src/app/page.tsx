@@ -10,10 +10,11 @@ export default function HomePage() {
       <main id="inicio">
         <section className="hero">
           <div className="container">
-            <h1>Encontre o Notebook Perfeito</h1>
+            <h1>Descubra qual notebook combina com o seu perfil</h1>
             <p>
-              Responda algumas perguntas e deixe nossa IA encontrar o notebook
-              ideal para suas necessidades
+              Responda algumas perguntas e receba recomendações explicadas com
+              base no seu uso, orçamento e prioridades. Traduzimos o seu uso em
+              critérios técnicos e mostramos modelos compatíveis.
             </p>
             <FinderSection />
           </div>

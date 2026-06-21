@@ -6,9 +6,9 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as Partial<LeadData>;
 
-    if (!body.name?.trim() || !body.email?.trim() || !body.phone?.trim()) {
+    if (!body.email?.trim()) {
       return NextResponse.json(
-        { error: "Nome, e-mail e telefone são obrigatórios." },
+        { error: "O e-mail é obrigatório para enviar o resumo." },
         { status: 400 }
       );
     }
@@ -21,13 +21,13 @@ export async function POST(request: Request) {
     }
 
     const lead: LeadData = {
-      name: body.name.trim(),
+      name: body.name?.trim() ?? "",
       email: body.email.trim(),
-      phone: body.phone.trim(),
+      phone: body.phone?.trim() ?? "",
       budget: body.budget?.trim() ?? "",
       usage: body.usage?.trim() ?? "",
       accessories: body.accessories ?? [],
-      stage: body.stage ?? "recommendation",
+      stage: body.stage ?? "done",
       chatHistory: body.chatHistory ?? [],
       source: body.source ?? "chat_widget",
     };

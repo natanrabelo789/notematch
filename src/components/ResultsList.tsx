@@ -1,6 +1,7 @@
 "use client";
 
 import ChatCtaInline from "@/components/ChatCtaInline";
+import { getNotebookProfile } from "@/lib/catalog";
 import type { Notebook } from "@/lib/types";
 
 interface ResultsListProps {
@@ -31,8 +32,8 @@ export default function ResultsList({
 
   const introText =
     recommendations.length > 0
-      ? `Encontramos ${recommendations.length} opção${recommendations.length > 1 ? "ões" : ""} dentro da faixa ${budgetLabel}.`
-      : `Não encontramos opções exatas na faixa ${budgetLabel}.`;
+      ? `Selecionamos ${recommendations.length} ${recommendations.length > 1 ? "modelos compatíveis" : "modelo compatível"} com o seu cenário de uso e orçamento (${budgetLabel}).`
+      : `Não encontramos um modelo que atenda bem a esse perfil dentro da faixa ${budgetLabel}.`;
 
   return (
     <div className="results active">
@@ -54,28 +55,45 @@ export default function ResultsList({
       {recommendations.length === 0 ? (
         <div className="result-card">
           <div className="result-title" style={{ fontSize: "1.25rem" }}>
-            Nenhum modelo encontrado nessa faixa
+            Nenhum modelo ideal nessa faixa
           </div>
           <p className="result-description">
-            Tente mudar a faixa de orçamento ou abrir o chat gratuito para um
-            especialista encontrar alternativas mais próximas do que você precisa.
+            Não encontramos um modelo que atenda bem a esse perfil dentro dessa
+            faixa. Podemos sugerir ajustes de expectativa, prioridades técnicas
+            ou alternativas equivalentes.
           </p>
           <ChatCtaInline
-            title="Quer ajuda para flexibilizar a busca?"
-            description="Nosso especialista pode sugerir substitutos ou promoções compatíveis."
-            buttonLabel="Falar com especialista grátis"
+            title="Quer conversar sobre alternativas?"
+            description="Podemos ajudar a repriorizar critérios técnicos ou ajustar a faixa de orçamento."
+            buttonLabel="Conversar sobre alternativas"
             onOpenChat={onOpenChat}
           />
         </div>
       ) : (
-        recommendations.map((rec, index) => (
+        recommendations.map((rec, index) => {
+          const profile = getNotebookProfile(rec);
+          return (
           <div key={rec.id} className="result-card">
             <div className="result-header">
               <div>
                 <div className="result-title">{rec.name}</div>
                 <span className="result-brand">{rec.brand}</span>
               </div>
-              <div className="result-price">{rec.price}</div>
+            </div>
+            <div className="recommendation-reason">
+              <h4>Por que esse modelo faz sentido para você</h4>
+              <p style={{ color: "var(--color-text-secondary)", margin: 0 }}>
+                {rec.reason}
+              </p>
+            </div>
+            <div className="result-fit">
+              <p style={{ margin: "0 0 6px" }}>
+                <strong>Indicado para:</strong> {profile.idealFor}.
+              </p>
+              <p style={{ margin: 0 }}>
+                <strong>Pontos de atenção:</strong> menos indicado para{" "}
+                {profile.watchOut}.
+              </p>
             </div>
             <div className="result-specs">
               <div className="spec-item">
@@ -100,12 +118,16 @@ export default function ResultsList({
               </div>
             </div>
             <p className="result-description">{rec.description}</p>
-            <div className="recommendation-reason">
-              <h4>Por que recomendamos?</h4>
-              <p style={{ color: "var(--color-text-secondary)", margin: 0 }}>
-                {rec.reason}
-              </p>
-            </div>
+            <p
+              style={{
+                fontSize: ".85rem",
+                color: "var(--color-text-secondary)",
+                margin: "var(--space-12) 0 0",
+              }}
+            >
+              Faixa de preço de referência: {rec.price}. As recomendações são
+              editoriais; disponibilidade e preço podem variar na loja.
+            </p>
             <div className="checkbox-wrapper">
               <input
                 type="checkbox"
@@ -118,7 +140,8 @@ export default function ResultsList({
               </label>
             </div>
           </div>
-        ))
+          );
+        })
       )}
 
       {userType === "gift" && giftAccessories.length > 0 && recommendations.length > 0 && (
@@ -133,8 +156,8 @@ export default function ResultsList({
           <div className="recommendation-reason">
             <h4>Sugestão</h4>
             <p style={{ color: "var(--color-text-secondary)", margin: 0 }}>
-              Use essa seleção para montar um combo mais completo na hora de
-              fechar a compra ou no atendimento com o especialista.
+              Considere esses itens para montar um conjunto mais completo de
+              acordo com o perfil de uso de quem vai receber.
             </p>
           </div>
         </div>
@@ -143,7 +166,7 @@ export default function ResultsList({
       {recommendations.length > 0 && (
         <div style={{ marginTop: "var(--space-24)" }}>
           <ChatCtaInline
-            description="Fale com um especialista gratuitamente para fechar a compra com confiança."
+            description="Quer entender qual dessas recomendações faz mais sentido para o seu perfil? Tire suas dúvidas com a gente."
             onOpenChat={onOpenChat}
           />
         </div>

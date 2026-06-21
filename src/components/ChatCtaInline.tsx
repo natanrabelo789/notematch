@@ -10,7 +10,7 @@ interface ChatCtaInlineProps {
 export default function ChatCtaInline({
   title,
   description,
-  buttonLabel = "Solicitar ajuda gratuita",
+  buttonLabel = "Tirar dúvidas sobre a recomendação",
   onOpenChat,
 }: ChatCtaInlineProps) {
   return (

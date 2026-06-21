@@ -46,12 +46,13 @@ export interface ChatMessage {
 
 export type LeadStage =
   | "initial"
+  | "budget_discussion"
+  | "usage_discussion"
+  | "offer_contact"
   | "ask_name"
   | "ask_email"
   | "ask_phone"
-  | "budget_discussion"
-  | "usage_discussion"
-  | "recommendation";
+  | "done";
 
 export interface LeadData {
   name: string;

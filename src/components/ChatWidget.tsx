@@ -9,19 +9,21 @@ interface ChatWidgetProps {
 }
 
 const INITIAL_MESSAGE =
-  "Olá! Posso te ajudar gratuitamente a escolher o notebook ideal e acelerar sua compra. O que você precisa?";
+  "Olá! Posso te ajudar gratuitamente a entender qual notebook faz mais sentido para o seu uso e orçamento. O que você precisa?";
 
 function getQuickReplies(stage: LeadStage): string[] {
   if (stage === "initial")
     return [
-      "Preciso de ajuda para escolher",
+      "Quero ajuda para escolher",
       "Tenho dúvidas sobre um modelo",
-      "Quero falar sobre orçamento",
+      "Quero entender critérios técnicos",
     ];
   if (stage === "budget_discussion")
     return ["Até R$ 4.000", "De R$ 4.000 a R$ 6.000", "Acima de R$ 6.000"];
   if (stage === "usage_discussion")
-    return ["Trabalho/Estudos", "Gaming", "Design/Edição", "Programação"];
+    return ["Trabalho/Estudos", "Jogos", "Design/Edição", "Programação"];
+  if (stage === "offer_contact")
+    return ["Sim, quero o resumo", "Não, obrigado"];
   return [];
 }
 
@@ -125,17 +127,60 @@ export default function ChatWidget({
     const stage = leadData.stage;
 
     if (stage === "initial") {
-      setLeadData((prev) => ({ ...prev, stage: "ask_name" }));
+      setLeadData((prev) => ({ ...prev, stage: "budget_discussion" }));
       addBotMessage(
-        "Ótimo! Vou te ajudar a encontrar o notebook perfeito. Para começar, qual é o seu nome?"
+        "Para te orientar melhor, qual faixa de orçamento faz mais sentido para você?"
       );
+      return;
+    }
+
+    if (stage === "budget_discussion") {
+      setLeadData((prev) => ({
+        ...prev,
+        budget: message,
+        stage: "usage_discussion",
+      }));
+      addBotMessage(
+        "E como você pretende usar o notebook? (ex.: estudos, trabalho, jogos, programação, edição)"
+      );
+      return;
+    }
+
+    if (stage === "usage_discussion") {
+      setLeadData((prev) => ({
+        ...prev,
+        usage: message,
+        stage: "offer_contact",
+      }));
+      addBotMessage(
+        `Combinando ${message} com a faixa ${leadData.budget}, eu focaria em equilibrar processador, memória e autonomia dentro do seu orçamento — vale priorizar mais RAM antes de uma GPU dedicada, a não ser que jogos ou edição pesem no seu uso. Se quiser, posso registrar suas preferências e te enviar um resumo da recomendação por e-mail. Deseja receber?`,
+        1000
+      );
+      return;
+    }
+
+    if (stage === "offer_contact") {
+      const accepted =
+        messageLower.includes("sim") ||
+        messageLower.includes("quero") ||
+        messageLower.includes("pode") ||
+        messageLower.includes("resumo");
+      if (!accepted) {
+        setLeadData((prev) => ({ ...prev, stage: "done" }));
+        addBotMessage(
+          "Sem problema! Qualquer dúvida sobre os critérios técnicos (processador, memória, autonomia, tela), é só perguntar."
+        );
+        return;
+      }
+      setLeadData((prev) => ({ ...prev, stage: "ask_name" }));
+      addBotMessage("Legal! Como posso te chamar? (opcional)");
       return;
     }
 
     if (stage === "ask_name") {
       setLeadData((prev) => ({ ...prev, name: message, stage: "ask_email" }));
       addBotMessage(
-        `Prazer, ${message}! Qual é o seu melhor e-mail para eu te enviar as recomendações?`
+        "Se quiser, deixe o melhor e-mail para eu enviar o resumo da recomendação."
       );
       return;
     }
@@ -147,43 +192,26 @@ export default function ChatWidget({
       }
       setLeadData((prev) => ({ ...prev, email: message, stage: "ask_phone" }));
       addBotMessage(
-        "Perfeito! E qual é seu telefone ou WhatsApp para contato?"
+        "Se preferir continuar depois, você pode deixar um contato opcional (telefone ou WhatsApp). Pode pular se não quiser."
       );
       return;
     }
 
     if (stage === "ask_phone") {
-      setLeadData((prev) => ({
-        ...prev,
-        phone: message,
-        stage: "budget_discussion",
-      }));
-      addBotMessage(
-        "Qual faixa de investimento faz mais sentido para você hoje?"
-      );
-      return;
-    }
-
-    if (stage === "budget_discussion") {
-      setLeadData((prev) => ({
-        ...prev,
-        budget: message,
-        stage: "usage_discussion",
-      }));
-      addBotMessage("Agora me diga rapidamente como o notebook vai ser usado.");
-      return;
-    }
-
-    if (stage === "usage_discussion") {
+      const skipped =
+        messageLower.includes("pular") ||
+        messageLower.includes("não") ||
+        messageLower.includes("nao");
+      const phone = skipped ? "" : message;
       const updated: LeadData = {
         ...leadData,
-        usage: message,
-        stage: "recommendation",
+        phone,
+        stage: "done",
         chatHistory: leadData.chatHistory,
       };
       setLeadData(updated);
       addBotMessage(
-        `Perfeito, ${leadData.name}! Com base no seu uso, vou deixar sua compra muito mais certeira. Nossa equipe vai continuar pelo e-mail ${leadData.email} e pelo WhatsApp ${leadData.phone} com opções compatíveis com ${leadData.budget}.`,
+        `Pronto! Registrei suas preferências (${leadData.budget}, ${leadData.usage}) e posso continuar essa análise quando você quiser. Ao enviar seus dados, você concorda em receber o resumo da recomendação e eventuais contatos sobre a sua análise.`,
         1000
       );
       saveLeadToApi({ ...updated, accessories });
@@ -192,15 +220,15 @@ export default function ChatWidget({
 
     if (messageLower.includes("garantia")) {
       addBotMessage(
-        "Todos os notebooks possuem garantia do fabricante, e podemos te orientar na melhor opção de cobertura estendida."
+        "A garantia varia conforme o fabricante e a loja. No lado técnico, posso te ajudar a entender o que prioriza durabilidade, como qualidade de construção, bateria e capacidade de upgrade."
       );
-    } else if (messageLower.includes("parcel")) {
+    } else if (messageLower.includes("parcel") || messageLower.includes("promo")) {
       addBotMessage(
-        "Podemos verificar parcelamento e promoções disponíveis quando nossa equipe entrar em contato."
+        "Preço, parcelamento e promoções são definidos pela loja e variam. Posso te ajudar a entender se vale priorizar memória, processador ou autonomia dentro do seu orçamento."
       );
     } else {
       addBotMessage(
-        "Ótima pergunta! Nosso especialista comercial pode aprofundar isso no atendimento e te ajudar a concluir a compra com segurança."
+        "Posso aprofundar os critérios técnicos para você comparar melhor as opções — processador, memória, armazenamento, GPU, tela e autonomia. Sobre qual deles quer entender mais?"
       );
     }
   }
@@ -218,9 +246,9 @@ export default function ChatWidget({
       setOpen(true);
       setHasNotification(false);
     }
-    setLeadData((prev) => ({ ...prev, stage: "ask_name" }));
+    setLeadData((prev) => ({ ...prev, stage: "budget_discussion" }));
     addBotMessage(
-      "Perfeito! Vou te ajudar a validar a compra e encontrar a melhor opção. Para começar, qual é o seu nome?",
+      "Vamos lá! Para entender qual perfil faz mais sentido, qual faixa de orçamento você considera?",
       300
     );
   }
@@ -241,7 +269,7 @@ export default function ChatWidget({
         type="button"
         className={`chat-fab${hasNotification ? " has-notification" : ""}`}
         onClick={toggleChat}
-        aria-label="Solicitar ajuda gratuita pelo chat"
+        aria-label="Tirar dúvidas sobre a recomendação"
       >
         💬
       </button>
@@ -251,7 +279,7 @@ export default function ChatWidget({
           <div>
             <strong>Especialista NoteMatch</strong>
             <div style={{ fontSize: ".85rem", opacity: 0.9 }}>
-              Ajuda gratuita para escolher e comprar melhor
+              Ajuda para entender qual perfil faz mais sentido para você
             </div>
           </div>
           <button

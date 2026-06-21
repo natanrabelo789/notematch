@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "NoteMatch - Encontre o Notebook Perfeito",
+  title: "NoteMatch - Descubra qual notebook combina com o seu perfil",
   description:
-    "Responda algumas perguntas e deixe nossa IA encontrar o notebook ideal para suas necessidades.",
+    "Guia editorial que traduz o seu uso em critérios técnicos e mostra modelos compatíveis com base em perfil, orçamento e prioridades.",
 };
 
 export default function RootLayout({
