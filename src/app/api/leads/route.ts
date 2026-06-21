@@ -41,9 +41,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
     console.error("[NoteMatch] /api/leads failed:", error);
     return NextResponse.json(
-      { error: "Erro ao salvar lead." },
+      { error: "Erro ao salvar lead.", detail },
       { status: 500 }
     );
   }

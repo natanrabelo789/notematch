@@ -80,7 +80,7 @@ export async function saveLead(lead: LeadData): Promise<{
 
   if (error) {
     console.error("[NoteMatch] Supabase error:", error);
-    throw new Error("Failed to save lead");
+    throw new Error(error.message);
   }
 
   return { saved: true, mode: "supabase" };
