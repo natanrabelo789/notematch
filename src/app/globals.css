@@ -69,17 +69,23 @@
   padding: 0;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   font-family: var(--font-family-base);
   background: var(--color-background);
   color: var(--color-text);
   line-height: 1.6;
+  overflow-x: clip;
+  overflow-wrap: break-word;
 }
 
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 var(--space-20);
+  padding: 0 clamp(16px, 4vw, 24px);
 }
 
 header {
@@ -131,12 +137,13 @@ nav a.active {
 }
 
 .hero h1 {
-  font-size: 3rem;
+  font-size: clamp(2rem, 1.2rem + 3.2vw, 3rem);
+  line-height: 1.1;
   margin-bottom: var(--space-16);
 }
 
 .hero p {
-  font-size: 1.25rem;
+  font-size: clamp(1rem, 0.85rem + 0.8vw, 1.25rem);
   color: var(--color-text-secondary);
   max-width: 600px;
   margin: 0 auto var(--space-32);
@@ -491,6 +498,7 @@ select.form-control {
   border-radius: var(--radius-lg);
   overflow: hidden;
   max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
   display: flex;
   flex-direction: column;
 }
@@ -748,15 +756,9 @@ footer {
     padding: 2.5rem 0 3rem;
   }
 
-  .hero h1 {
-    font-size: 2rem;
-    line-height: 1.15;
-  }
-
   .hero p {
-    font-size: 1rem;
     margin: 0 auto var(--space-24);
-    max-width: 34ch;
+    max-width: 38ch;
   }
 
   .finder-section {
@@ -793,10 +795,51 @@ footer {
     width: 100%;
   }
 
+  /* Comparison modal becomes full-screen on phones */
+  .comparison-modal {
+    padding: 0;
+  }
+
+  .comparison-content {
+    max-width: 100%;
+    max-height: 100vh;
+    max-height: 100dvh;
+    height: 100dvh;
+    border-radius: 0;
+  }
+
+  .comparison-header {
+    padding: var(--space-16) var(--space-20);
+  }
+
+  .comparison-body {
+    padding: var(--space-16);
+  }
+
+  .comparison-table th,
+  .comparison-table td {
+    padding: 8px;
+    font-size: 0.9rem;
+  }
+
+  /* Chat stays above the FAB and never overflows the viewport */
   .chat-window {
     right: 12px;
     bottom: 84px;
     width: calc(100vw - 24px);
+    max-height: calc(100vh - 100px);
+    max-height: calc(100dvh - 100px);
+  }
+
+  .chat-window.active {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chat-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
   }
 
   .chat-fab {
@@ -804,5 +847,41 @@ footer {
     bottom: 12px;
     width: 56px;
     height: 56px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero {
+    padding: 2rem 0 2.5rem;
+  }
+
+  .finder-section {
+    padding: 16px;
+    border-radius: var(--radius-base);
+  }
+
+  .result-card {
+    padding: var(--space-16);
+  }
+
+  .result-title {
+    font-size: 1.25rem;
+  }
+
+  .result-price {
+    font-size: 1.25rem;
+  }
+
+  .btn {
+    padding: var(--space-12) var(--space-20);
+  }
+
+  .compare-section {
+    bottom: 12px;
+  }
+
+  .compare-chip {
+    width: 100%;
+    justify-content: space-between;
   }
 }
