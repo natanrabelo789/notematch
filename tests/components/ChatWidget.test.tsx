@@ -10,21 +10,52 @@ async function flush(ms = 1100) {
 }
 
 function sendText(value: string) {
-  const input = screen.getByPlaceholderText("Digite sua mensagem...");
+  const input = screen.getByPlaceholderText("Descreva o que você precisa...");
   fireEvent.change(input, { target: { value } });
   fireEvent.click(screen.getByRole("button", { name: "Enviar" }));
 }
 
-const fetchMock = vi.fn((_url: string, _opts: RequestInit) =>
-  Promise.resolve({
+const recommendationPayload = {
+  recommendations: [
+    {
+      id: "lenovo-loq-15",
+      name: "Lenovo LOQ 15",
+      brand: "Lenovo",
+      price: "R$ 5.999",
+      priceValue: 5999,
+      processor: "Intel Core i7",
+      ram: "16GB",
+      storage: "512GB",
+      gpu: "RTX 4050",
+      screen: "15.6\"",
+      description: "Gamer de entrada",
+      reason: "Boa porta de entrada para games.",
+      categories: ["gaming"],
+    },
+  ],
+  category: "gaming",
+  budgetLabel: "de R$ 4.000 a R$ 6.000",
+  catalogSource: "fallback",
+  interpretation: "Perfil: gaming · orçamento de R$ 4.000 a R$ 6.000",
+};
+
+const fetchMock = vi.fn((url: string) => {
+  if (url === "/api/recommendations") {
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(recommendationPayload),
+    });
+  }
+  return Promise.resolve({
     ok: true,
     json: () => Promise.resolve({ saved: true, mode: "supabase" }),
-  })
-);
+  });
+});
 
 beforeEach(() => {
   vi.useFakeTimers();
   vi.stubGlobal("fetch", fetchMock);
+  fetchMock.mockClear();
 });
 
 afterEach(() => {
@@ -68,10 +99,17 @@ describe("ChatWidget", () => {
     await flush();
     expect(screen.getByText(/como você pretende usar o notebook/i)).toBeInTheDocument();
 
-    // usage_discussion -> offer_contact
+    // usage_discussion -> recommendations -> offer_contact
     fireEvent.click(screen.getByRole("button", { name: "Jogos" }));
-    await flush();
+    await act(async () => {
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(400);
+    });
+    expect(screen.getByText(/Lenovo LOQ 15/i)).toBeInTheDocument();
     expect(screen.getByText(/Deseja receber\?/i)).toBeInTheDocument();
+
+    const recCall = fetchMock.mock.calls.find(([url]) => url === "/api/recommendations");
+    expect(recCall).toBeTruthy();
 
     // offer_contact -> ask_name
     fireEvent.click(screen.getByRole("button", { name: "Sim, quero o resumo" }));
@@ -98,9 +136,9 @@ describe("ChatWidget", () => {
     await flush();
     expect(screen.getByText(/Registrei suas preferências/i)).toBeInTheDocument();
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, options] = fetchMock.mock.calls[0];
-    expect(url).toBe("/api/leads");
+    const leadCall = fetchMock.mock.calls.find(([url]) => url === "/api/leads");
+    expect(leadCall).toBeTruthy();
+    const [, options] = leadCall!;
     expect(options.method).toBe("POST");
     const payload = JSON.parse(options.body as string);
     expect(payload).toMatchObject({
@@ -112,6 +150,25 @@ describe("ChatWidget", () => {
       accessories: ["Mouse"],
       stage: "done",
     });
+  });
+
+  it("matches a free-form natural language need on the initial stage", async () => {
+    render(<ChatWidget />);
+    fireEvent.click(
+      screen.getByRole("button", { name: /Tirar dúvidas sobre a recomendação/i })
+    );
+
+    sendText("Preciso de um notebook gamer Lenovo até R$ 6.000 para jogar Fortnite");
+    await act(async () => {
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(400);
+    });
+
+    expect(screen.getByText(/Lenovo LOQ 15/i)).toBeInTheDocument();
+    const recCall = fetchMock.mock.calls.find(([url]) => url === "/api/recommendations");
+    expect(recCall).toBeTruthy();
+    const body = JSON.parse((recCall![1] as RequestInit).body as string);
+    expect(body.query).toMatch(/gamer Lenovo/i);
   });
 
   it("opens and starts the specialist flow via the openChatWidget event", async () => {

@@ -687,6 +687,10 @@ select.form-control {
   color: var(--color-text);
 }
 
+.chat-bubble-pre {
+  white-space: pre-wrap;
+}
+
 .chat-message.user .chat-bubble {
   background: var(--color-primary);
   color: var(--color-btn-primary-text);
