@@ -17,4 +17,8 @@ create table if not exists public.leads (
 
 alter table public.leads enable row level security;
 
+-- Explicit grants (Data API no longer auto-exposes new tables on all projects).
+-- service_role still needs DML grants even though it bypasses RLS.
+grant select, insert, update, delete on table public.leads to service_role;
+
 -- Service role bypasses RLS; no public policies needed for server-side inserts.

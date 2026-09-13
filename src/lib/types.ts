@@ -14,7 +14,22 @@ export interface Notebook {
   id: string;
   name: string;
   brand: string;
+  /**
+   * Reference price label (e.g. "R$ 2.499").
+   *
+   * AMAZON ASSOCIATES COMPLIANCE: This field is NOT currently displayed to
+   * users. Per Participation Requirements §2(b), prices may only be shown if
+   * (a) served by Amazon via a Special Link, or (b) obtained via the Creators
+   * API / PA API. Hardcoded prices violate this rule. The field is kept in the
+   * data structure for future PA API integration only.
+   */
   price: string;
+  /**
+   * Numeric reference price (e.g. 2499). Used internally for budget matching.
+   *
+   * AMAZON ASSOCIATES COMPLIANCE: Not displayed to users (see `price` above).
+   * Kept for internal budget filtering and future PA API integration only.
+   */
   priceValue: number;
   processor: string;
   ram: string;

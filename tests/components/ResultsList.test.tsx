@@ -39,6 +39,27 @@ describe("ResultsList", () => {
     expect(screen.getByText("Notebook B")).toBeInTheDocument();
   });
 
+  it("shows the Associates disclosure near the results list", () => {
+    renderList({
+      recommendations: [makeNotebook({ id: "a", name: "Notebook A" })],
+    });
+    expect(
+      screen.getByText(/Como associado da Amazon, podemos receber comissão/i)
+    ).toBeInTheDocument();
+  });
+
+  it("does not render hardcoded prices as Amazon product prices", () => {
+    renderList({
+      recommendations: [makeNotebook({ id: "a", price: "R$ 9.999" })],
+    });
+    // The editorial disclaimer remains, but the specific price label is not shown.
+    expect(
+      screen.getByText(/As recomendações são editoriais/i)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Faixa de preço de referência/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("R$ 9.999")).not.toBeInTheDocument();
+  });
+
   it("uses the singular wording for a single recommendation", () => {
     renderList({ recommendations: [makeNotebook({ id: "a" })] });
     expect(screen.getByText(/Selecionamos 1 modelo compatível/i)).toBeInTheDocument();

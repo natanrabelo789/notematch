@@ -4,6 +4,17 @@ import ChatCtaInline from "@/components/ChatCtaInline";
 import { getNotebookProfile } from "@/lib/catalog";
 import type { Notebook } from "@/lib/types";
 
+// Amazon Associates compliance:
+// - We do NOT render hardcoded prices here. Per Participation Requirements §2(b),
+//   prices may only be shown if served by Amazon via a Special Link or obtained via
+//   the Creators API / PA API. The catalog still keeps `price`/`priceValue` fields
+//   for future PA API integration, but they are intentionally not displayed.
+// - When PA API/Creators API is wired up, render <PriceDisclaimer updatedAt={...} />
+//   immediately adjacent to each price (see src/components/PriceDisclaimer.tsx).
+// - When Amazon Special Links are added to each recommendation, render
+//   <AffiliateDisclosure /> here, immediately adjacent to the link, per
+//   FTC/Amazon link-level disclosure requirements (see src/components/AffiliateDisclosure.tsx).
+
 interface ResultsListProps {
   recommendations: Notebook[];
   userType: "myself" | "gift";
@@ -49,6 +60,19 @@ export default function ResultsList({
               <strong>Acessórios desejados:</strong> {giftAccessories.join(", ")}.
             </>
           )}
+        </p>
+        {/* Site-wide Associates disclosure duplicated near the recommendations
+            list (FTC/Amazon placement requirement). Keep wording consistent
+            with src/components/Footer.tsx. */}
+        <p
+          style={{
+            fontSize: ".8rem",
+            color: "var(--color-text-secondary)",
+            margin: "var(--space-12) 0 0",
+          }}
+        >
+          Como associado da Amazon, podemos receber comissão por compras
+          qualificadas.
         </p>
       </div>
 
@@ -118,6 +142,22 @@ export default function ResultsList({
               </div>
             </div>
             <p className="result-description">{rec.description}</p>
+            {/*
+              Amazon Associates compliance — do NOT render hardcoded prices here.
+              Per Participation Requirements §2(b), prices may only be shown if
+              served by Amazon via a Special Link or obtained via the Creators
+              API / PA API. The catalog keeps `price`/`priceValue` for future PA
+              API use but they must not be displayed as Amazon product prices now.
+
+              When PA API/Creators API is integrated, render the price here with:
+                <PriceDisclaimer updatedAt={lastRefreshedAt} />
+              immediately adjacent to the displayed price.
+
+              When Amazon Special Links are added to each recommendation, render:
+                <AffiliateDisclosure />
+              immediately adjacent to the link, per FTC/Amazon link-level
+              disclosure requirements.
+            */}
             <p
               style={{
                 fontSize: ".85rem",
@@ -125,8 +165,8 @@ export default function ResultsList({
                 margin: "var(--space-12) 0 0",
               }}
             >
-              Faixa de preço de referência: {rec.price}. As recomendações são
-              editoriais; disponibilidade e preço podem variar na loja.
+              As recomendações são editoriais; a disponibilidade e o preço podem
+              variar na loja.
             </p>
             <div className="checkbox-wrapper">
               <input

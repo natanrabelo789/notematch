@@ -21,6 +21,20 @@ describe("Footer", () => {
     render(<Footer />);
     expect(screen.getByText(/associado da Amazon/i)).toBeInTheDocument();
   });
+
+  it("renders the CERTAIN CONTENT disclaimer (IP License §2(k))", () => {
+    render(<Footer />);
+    expect(
+      screen.getByText(/certo conteúdo que aparece neste site vem da amazon/i)
+    ).toBeInTheDocument();
+  });
+
+  it("links to the privacy policy", () => {
+    render(<Footer />);
+    expect(
+      screen.getByRole("link", { name: /Política de Privacidade/i })
+    ).toHaveAttribute("href", "/privacidade");
+  });
 });
 
 describe("ChatCtaInline", () => {

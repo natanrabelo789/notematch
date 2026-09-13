@@ -1,5 +1,14 @@
 import type { Notebook, NotebookCategory } from "./types";
 
+// AMAZON ASSOCIATES COMPLIANCE:
+// The `price` and `priceValue` fields on each notebook are kept in this catalog
+// for internal budget matching and for future PA API / Creators API integration.
+// They are NOT rendered to users as Amazon product prices. Per Participation
+// Requirements §2(b), prices may only be displayed if served by Amazon via a
+// Special Link or obtained via the PA API. See src/components/ResultsList.tsx
+// and src/components/PriceDisclaimer.tsx for the rendering rules once PA API is
+// wired up.
+
 export const NOTEBOOK_CATALOG: Notebook[] = [
   {
     id: "acer-aspire-go-15",
@@ -97,7 +106,7 @@ export const NOTEBOOK_CATALOG: Notebook[] = [
     description:
       "Excelente custo-benefício para gamers com display de alta taxa de atualização",
     reason:
-      "Ótimo equilíbrio entre preço e performance. Roda Fortnite e Valorant em configurações altas com mais de 144 FPS.",
+      "Ótimo equilíbrio entre preço e performance. Roda Fortnite e Valorant em configurações altas com alta taxa de quadros.",
     categories: ["gaming"],
   },
   {
@@ -148,7 +157,7 @@ export const NOTEBOOK_CATALOG: Notebook[] = [
     description:
       "Notebook gamer de alta performance com refrigeração avançada e teclado RGB customizável",
     reason:
-      "Perfeito para jogos modernos em configurações ultra. A RTX 4080 garante mais de 100 FPS em Fortnite.",
+      "Perfeito para jogos modernos em configurações ultra. A RTX 4080 entrega desempenho elevado em jogos modernos.",
     categories: ["gaming"],
   },
   {

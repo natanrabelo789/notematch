@@ -131,10 +131,23 @@ describe("ChatWidget", () => {
     await flush();
     expect(screen.getByText(/contato opcional/i)).toBeInTheDocument();
 
+    // LGPD data-collection notice is shown while capturing email/phone.
+    expect(
+      screen.getByRole("link", { name: /Política de Privacidade/i })
+    ).toHaveAttribute("href", "/privacidade");
+
     // ask_phone: skip -> done + lead is saved
     sendText("pular");
     await flush();
     expect(screen.getByText(/Registrei suas preferências/i)).toBeInTheDocument();
+
+    // Email compliance: final message includes unsubscribe note, Associates
+    // disclosure, and a reference to the privacy policy.
+    expect(screen.getByText(/Pode cancelar a qualquer momento/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Consulte nossa Política de Privacidade em \/privacidade/i)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/associado da Amazon/i)).toBeInTheDocument();
 
     const leadCall = fetchMock.mock.calls.find(([url]) => url === "/api/leads");
     expect(leadCall).toBeTruthy();

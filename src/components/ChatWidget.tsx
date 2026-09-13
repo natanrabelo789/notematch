@@ -13,6 +13,7 @@ import {
   UNCLEAR_INTENT_MESSAGE,
 } from "@/lib/nl";
 import { hasClearUsageIntent } from "@/lib/recommendations";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ChatWidgetProps {
@@ -372,9 +373,16 @@ export default function ChatWidget({
       };
       setLeadData(updated);
       addBotMessage(
-        `Pronto! Registrei suas preferências (${current.budget || "orçamento sob consulta"}, ${current.usage}) e posso continuar essa análise quando você quiser. Ao enviar seus dados, você concorda em receber o resumo da recomendação e eventuais contatos sobre a sua análise.`,
+        `Pronto! Registrei suas preferências (${current.budget || "orçamento sob consulta"}, ${current.usage}) e posso continuar essa análise quando você quiser. Você receberá o resumo por e-mail. Pode cancelar a qualquer momento. Como associado da Amazon, podemos receber comissão por compras qualificadas. Consulte nossa Política de Privacidade em /privacidade.`,
         1000
       );
+      // EMAIL COMPLIANCE NOTE (future implementation): The actual email-sending
+      // flow (not yet implemented) must comply with Brazil's email marketing
+      // rules and Amazon's Trademark Guidelines §4. Each outgoing message must
+      // include: (1) a physical sender address, (2) a working unsubscribe link,
+      // and (3) the Associates disclosure ("Como associado da Amazon, podemos
+      // receber comissão por compras qualificadas.") in the email body. See
+      // COMPLIANCE.md for the full checklist.
       saveLeadToApi({ ...updated, accessories });
       return;
     }
@@ -496,6 +504,28 @@ export default function ChatWidget({
                 {reply}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* LGPD data-collection notice: shown when we capture email/phone
+            (ask_email / ask_phone stages). Links to the privacy policy. */}
+        {(leadData.stage === "ask_email" || leadData.stage === "ask_phone") && (
+          <div
+            style={{
+              fontSize: ".75rem",
+              color: "var(--color-text-secondary)",
+              padding: "0 var(--space-16)",
+              textAlign: "center",
+            }}
+          >
+            Seus dados são tratados conforme nossa{" "}
+            <Link
+              href="/privacidade"
+              style={{ color: "var(--color-text-secondary)" }}
+            >
+              Política de Privacidade
+            </Link>
+            .
           </div>
         )}
 
