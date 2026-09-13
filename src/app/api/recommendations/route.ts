@@ -41,8 +41,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Free-text query path: only recommend when usage maps to a real category.
-    if (queryDriven && !hasClearUsageIntent(usage)) {
+    // Only recommend when usage maps to a concrete notebook category.
+    // Applies to both the free-text query path and the structured form usage field.
+    if (!hasClearUsageIntent(usage)) {
       return NextResponse.json(
         {
           error: UNCLEAR_INTENT_MESSAGE,

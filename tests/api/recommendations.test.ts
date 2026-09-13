@@ -95,6 +95,17 @@ describe("POST /api/recommendations", () => {
     expect(data.recommendations).toEqual([]);
   });
 
+  it("rejects nonsense usage text with 422 instead of recommending", async () => {
+    const res = await POST(
+      makeRequest({ usage: "i want to do a barbecue", budgetRange: "4000-6000" })
+    );
+
+    expect(res.status).toBe(422);
+    const data = await res.json();
+    expect(data.unclear).toBe(true);
+    expect(data.recommendations).toEqual([]);
+  });
+
   it("returns 500 when the body is not valid JSON", async () => {
     const res = await POST(makeRequest("{ not json", { raw: true }));
     expect(res.status).toBe(500);
