@@ -1,6 +1,18 @@
 "use client";
 
-import type { ChatMessage, LeadData, LeadStage } from "@/lib/types";
+import type {
+  ChatMessage,
+  LeadData,
+  LeadStage,
+  Notebook,
+  RecommendationResponse,
+} from "@/lib/types";
+import {
+  looksLikeNeedDescription,
+  parseBudgetRange,
+  UNCLEAR_INTENT_MESSAGE,
+} from "@/lib/nl";
+import { hasClearUsageIntent } from "@/lib/recommendations";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ChatWidgetProps {
@@ -9,7 +21,7 @@ interface ChatWidgetProps {
 }
 
 const INITIAL_MESSAGE =
-  "Olá! Posso te ajudar gratuitamente a entender qual notebook faz mais sentido para o seu uso e orçamento. O que você precisa?";
+  "Olá! Posso te ajudar gratuitamente a entender qual notebook faz mais sentido para o seu uso e orçamento. Descreva o que você precisa em uma frase, ou escolha uma opção abaixo.";
 
 function getQuickReplies(stage: LeadStage): string[] {
   if (stage === "initial")
@@ -25,6 +37,31 @@ function getQuickReplies(stage: LeadStage): string[] {
   if (stage === "offer_contact")
     return ["Sim, quero o resumo", "Não, obrigado"];
   return [];
+}
+
+function formatOptionsMessage(
+  result: RecommendationResponse,
+  preface?: string
+): string {
+  const header =
+    preface ??
+    (result.interpretation
+      ? `Com base no que você descreveu (${result.interpretation}), estas opções do nosso catálogo fazem sentido:`
+      : "Estas opções do nosso catálogo fazem sentido para o seu perfil:");
+
+  if (result.recommendations.length === 0) {
+    return `${header}\n\nNão encontrei um modelo ideal nessa faixa. Podemos ajustar o orçamento ou as prioridades técnicas.`;
+  }
+
+  const lines = result.recommendations.map((nb: Notebook, index: number) => {
+    return `${index + 1}. ${nb.name} (${nb.brand}) — ${nb.price}\n   ${nb.reason}`;
+  });
+
+  return `${header}\n\n${lines.join("\n\n")}\n\nSe quiser, posso registrar suas preferências e te enviar um resumo por e-mail. Deseja receber?`;
+}
+
+function budgetRangeFromLeadBudget(budget: string) {
+  return parseBudgetRange(budget) ?? "4000-6000";
 }
 
 export default function ChatWidget({
@@ -55,6 +92,11 @@ export default function ChatWidget({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const leadDataRef = useRef(leadData);
+
+  useEffect(() => {
+    leadDataRef.current = leadData;
+  }, [leadData]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -130,11 +172,120 @@ export default function ChatWidget({
     }
   }
 
-  function processMessage(message: string) {
+  async function fetchRecommendations(payload: {
+    usage?: string;
+    budgetRange?: string;
+    brand?: string;
+    query?: string;
+  }): Promise<(RecommendationResponse & { unclear?: boolean }) | null> {
+    try {
+      const res = await fetch("/api/recommendations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | (RecommendationResponse & { unclear?: boolean; error?: string })
+        | null;
+      if (res.status === 422 && data?.unclear) {
+        return { unclear: true, recommendations: [], category: "basic", budgetLabel: "" };
+      }
+      if (!res.ok || !data) return null;
+      return data;
+    } catch (error) {
+      console.error("[NoteMatch] Failed to reach /api/recommendations:", error);
+      return null;
+    }
+  }
+
+  async function replyWithMatches(
+    payload: {
+      usage?: string;
+      budgetRange?: string;
+      brand?: string;
+      query?: string;
+    },
+    leadPatch: Partial<LeadData>,
+    options?: { stayOnUnclear?: LeadStage }
+  ) {
+    const textForIntent = payload.query || payload.usage || "";
+    if (textForIntent && !hasClearUsageIntent(textForIntent)) {
+      setLeadData((prev) => ({
+        ...prev,
+        ...leadPatch,
+        stage: options?.stayOnUnclear ?? prev.stage,
+      }));
+      addBotMessage(UNCLEAR_INTENT_MESSAGE, 300);
+      return;
+    }
+
+    setTyping(true);
+    const result = await fetchRecommendations(payload);
+    setTyping(false);
+
+    if (!result) {
+      setLeadData((prev) => ({
+        ...prev,
+        ...leadPatch,
+        stage: "offer_contact",
+      }));
+      addBotMessage(
+        "Tive um problema ao consultar o catálogo agora. Posso registrar suas preferências e te enviar um resumo depois. Deseja receber?",
+        300
+      );
+      return;
+    }
+
+    if (result.unclear) {
+      setLeadData((prev) => ({
+        ...prev,
+        ...leadPatch,
+        stage: options?.stayOnUnclear ?? prev.stage,
+      }));
+      addBotMessage(UNCLEAR_INTENT_MESSAGE, 300);
+      return;
+    }
+
+    setLeadData((prev) => ({
+      ...prev,
+      ...leadPatch,
+      stage: "offer_contact",
+    }));
+    addBotMessage(formatOptionsMessage(result), 300);
+  }
+
+  async function processMessage(message: string) {
     const messageLower = message.toLowerCase();
-    const stage = leadData.stage;
+    const stage = leadDataRef.current.stage;
 
     if (stage === "initial") {
+      if (looksLikeNeedDescription(message)) {
+        await replyWithMatches(
+          { query: message },
+          {
+            usage: message,
+            budget: parseBudgetRange(message) ?? "",
+          },
+          { stayOnUnclear: "initial" }
+        );
+        return;
+      }
+
+      const initialQuickReplies = new Set(
+        getQuickReplies("initial").map((reply) => reply.toLowerCase())
+      );
+      const isGuidedStarter = initialQuickReplies.has(messageLower);
+
+      // Vague free text (not a guided quick reply) — ask to rephrase, do not recommend.
+      if (
+        !isGuidedStarter &&
+        message.trim().length >= 20 &&
+        !hasClearUsageIntent(message)
+      ) {
+        addBotMessage(UNCLEAR_INTENT_MESSAGE);
+        return;
+      }
+
       setLeadData((prev) => ({ ...prev, stage: "budget_discussion" }));
       addBotMessage(
         "Para te orientar melhor, qual faixa de orçamento faz mais sentido para você?"
@@ -155,14 +306,15 @@ export default function ChatWidget({
     }
 
     if (stage === "usage_discussion") {
-      setLeadData((prev) => ({
-        ...prev,
-        usage: message,
-        stage: "offer_contact",
-      }));
-      addBotMessage(
-        `Combinando ${message} com a faixa ${leadData.budget}, eu focaria em equilibrar processador, memória e autonomia dentro do seu orçamento — vale priorizar mais RAM antes de uma GPU dedicada, a não ser que jogos ou edição pesem no seu uso. Se quiser, posso registrar suas preferências e te enviar um resumo da recomendação por e-mail. Deseja receber?`,
-        1000
+      const budget = leadDataRef.current.budget;
+      await replyWithMatches(
+        {
+          usage: message,
+          budgetRange: budgetRangeFromLeadBudget(budget),
+          query: `${message}. Orçamento: ${budget}`,
+        },
+        { usage: message },
+        { stayOnUnclear: "usage_discussion" }
       );
       return;
     }
@@ -211,15 +363,16 @@ export default function ChatWidget({
         messageLower.includes("não") ||
         messageLower.includes("nao");
       const phone = skipped ? "" : message;
+      const current = leadDataRef.current;
       const updated: LeadData = {
-        ...leadData,
+        ...current,
         phone,
         stage: "done",
-        chatHistory: leadData.chatHistory,
+        chatHistory: current.chatHistory,
       };
       setLeadData(updated);
       addBotMessage(
-        `Pronto! Registrei suas preferências (${leadData.budget}, ${leadData.usage}) e posso continuar essa análise quando você quiser. Ao enviar seus dados, você concorda em receber o resumo da recomendação e eventuais contatos sobre a sua análise.`,
+        `Pronto! Registrei suas preferências (${current.budget || "orçamento sob consulta"}, ${current.usage}) e posso continuar essa análise quando você quiser. Ao enviar seus dados, você concorda em receber o resumo da recomendação e eventuais contatos sobre a sua análise.`,
         1000
       );
       saveLeadToApi({ ...updated, accessories });
@@ -234,9 +387,20 @@ export default function ChatWidget({
       addBotMessage(
         "Preço, parcelamento e promoções são definidos pela loja e variam. Posso te ajudar a entender se vale priorizar memória, processador ou autonomia dentro do seu orçamento."
       );
+    } else if (looksLikeNeedDescription(message)) {
+      await replyWithMatches(
+        { query: message },
+        {
+          usage: message,
+          budget: parseBudgetRange(message) ?? leadDataRef.current.budget,
+        },
+        { stayOnUnclear: leadDataRef.current.stage }
+      );
+    } else if (message.trim().length >= 20) {
+      addBotMessage(UNCLEAR_INTENT_MESSAGE);
     } else {
       addBotMessage(
-        "Posso aprofundar os critérios técnicos para você comparar melhor as opções — processador, memória, armazenamento, GPU, tela e autonomia. Sobre qual deles quer entender mais?"
+        "Posso aprofundar os critérios técnicos para você comparar melhor as opções — processador, memória, armazenamento, GPU, tela e autonomia. Sobre qual deles quer entender mais? Ou descreva de novo o que você precisa que eu busco no catálogo."
       );
     }
   }
@@ -246,7 +410,7 @@ export default function ChatWidget({
     if (!message) return;
     addUserMessage(message);
     setInput("");
-    processMessage(message);
+    void processMessage(message);
   }
 
   function openSpecialistChat() {
@@ -310,7 +474,7 @@ export default function ChatWidget({
                 {msg.role === "user" ? "V" : "N"}
               </div>
               <div>
-                <div className="chat-bubble">{msg.message}</div>
+                <div className="chat-bubble chat-bubble-pre">{msg.message}</div>
               </div>
             </div>
           ))}
@@ -340,7 +504,7 @@ export default function ChatWidget({
             ref={inputRef}
             type="text"
             className="form-control"
-            placeholder="Digite sua mensagem..."
+            placeholder="Descreva o que você precisa..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {

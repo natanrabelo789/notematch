@@ -62,6 +62,36 @@ describe("FinderSection (integration)", () => {
     expect(screen.queryByText("Notebook A")).not.toBeInTheDocument();
   });
 
+  it("shows a rephrase message and no recommendations for nonsense usage", async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 422,
+      json: async () => ({
+        unclear: true,
+        recommendations: [],
+        error:
+          "Não entendi bem o que você precisa no notebook. Pode reformular?",
+      }),
+    });
+    const user = userEvent.setup();
+    render(<FinderSection />);
+
+    await user.type(
+      screen.getByLabelText(/Descreva como você vai usar/i),
+      "i want to do a barbecue"
+    );
+    await user.click(screen.getByRole("button", { name: /Ver recomendações/i }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toBeInTheDocument()
+    );
+    expect(
+      screen.getByText(/Pode reformular/i)
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Notebook A")).not.toBeInTheDocument();
+    expect(alertMock).not.toHaveBeenCalled();
+  });
+
   it("enforces a maximum of two notebooks in the comparison", async () => {
     const user = userEvent.setup();
     render(<FinderSection />);

@@ -22,11 +22,13 @@ export default function FinderSection() {
     []
   );
   const [comparisonOpen, setComparisonOpen] = useState(false);
+  const [usageError, setUsageError] = useState("");
 
   async function handleSubmit(data: FinderFormData) {
     setLoading(true);
     setShowResults(false);
     setCompareSelection([]);
+    setUsageError("");
 
     try {
       const response = await fetch("/api/recommendations", {
@@ -38,6 +40,15 @@ export default function FinderSection() {
           budgetRange: data.budgetRange,
         }),
       });
+
+      if (response.status === 422) {
+        const unclear = await response.json().catch(() => null);
+        setUsageError(
+          unclear?.error ||
+            "Não entendi bem o que você precisa no notebook. Pode reformular descrevendo o uso (estudos, trabalho, jogos, programação, design…)?"
+        );
+        return;
+      }
 
       if (!response.ok) throw new Error("Request failed");
 
@@ -99,6 +110,19 @@ export default function FinderSection() {
   return (
     <div className="finder-section">
       <NotebookForm onSubmit={handleSubmit} loading={loading} />
+
+      {usageError && (
+        <div
+          className="result-card"
+          role="alert"
+          style={{ marginBottom: "var(--space-24)" }}
+        >
+          <div className="result-title" style={{ fontSize: "1.2rem" }}>
+            Não entendi bem o que você precisa
+          </div>
+          <p className="result-description">{usageError}</p>
+        </div>
+      )}
 
       {loading && (
         <div className="loading active">

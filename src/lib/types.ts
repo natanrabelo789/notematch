@@ -30,12 +30,20 @@ export interface RecommendationRequest {
   usage: string;
   brand?: string;
   budgetRange: BudgetRange;
+  /** Optional free-text description; parsed when structured fields are incomplete. */
+  query?: string;
 }
 
 export interface RecommendationResponse {
   recommendations: Notebook[];
   category: NotebookCategory;
   budgetLabel: string;
+  catalogSource?: "supabase" | "fallback";
+  budgetDetected?: boolean;
+  brandDetected?: boolean;
+  interpretation?: string;
+  /** True when free-text query could not be mapped to notebook criteria. */
+  unclear?: boolean;
 }
 
 export interface ChatMessage {
