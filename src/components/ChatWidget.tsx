@@ -7,7 +7,12 @@ import type {
   Notebook,
   RecommendationResponse,
 } from "@/lib/types";
-import { looksLikeNeedDescription, parseBudgetRange } from "@/lib/nl";
+import {
+  looksLikeNeedDescription,
+  parseBudgetRange,
+  UNCLEAR_INTENT_MESSAGE,
+} from "@/lib/nl";
+import { hasClearUsageIntent } from "@/lib/recommendations";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ChatWidgetProps {
@@ -172,15 +177,21 @@ export default function ChatWidget({
     budgetRange?: string;
     brand?: string;
     query?: string;
-  }): Promise<RecommendationResponse | null> {
+  }): Promise<(RecommendationResponse & { unclear?: boolean }) | null> {
     try {
       const res = await fetch("/api/recommendations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) return null;
-      return (await res.json()) as RecommendationResponse;
+      const data = (await res.json().catch(() => null)) as
+        | (RecommendationResponse & { unclear?: boolean; error?: string })
+        | null;
+      if (res.status === 422 && data?.unclear) {
+        return { unclear: true, recommendations: [], category: "basic", budgetLabel: "" };
+      }
+      if (!res.ok || !data) return null;
+      return data;
     } catch (error) {
       console.error("[NoteMatch] Failed to reach /api/recommendations:", error);
       return null;
@@ -194,8 +205,20 @@ export default function ChatWidget({
       brand?: string;
       query?: string;
     },
-    leadPatch: Partial<LeadData>
+    leadPatch: Partial<LeadData>,
+    options?: { stayOnUnclear?: LeadStage }
   ) {
+    const textForIntent = payload.query || payload.usage || "";
+    if (textForIntent && !hasClearUsageIntent(textForIntent)) {
+      setLeadData((prev) => ({
+        ...prev,
+        ...leadPatch,
+        stage: options?.stayOnUnclear ?? prev.stage,
+      }));
+      addBotMessage(UNCLEAR_INTENT_MESSAGE, 300);
+      return;
+    }
+
     setTyping(true);
     const result = await fetchRecommendations(payload);
     setTyping(false);
@@ -210,6 +233,16 @@ export default function ChatWidget({
         "Tive um problema ao consultar o catálogo agora. Posso registrar suas preferências e te enviar um resumo depois. Deseja receber?",
         300
       );
+      return;
+    }
+
+    if (result.unclear) {
+      setLeadData((prev) => ({
+        ...prev,
+        ...leadPatch,
+        stage: options?.stayOnUnclear ?? prev.stage,
+      }));
+      addBotMessage(UNCLEAR_INTENT_MESSAGE, 300);
       return;
     }
 
@@ -232,8 +265,24 @@ export default function ChatWidget({
           {
             usage: message,
             budget: parseBudgetRange(message) ?? "",
-          }
+          },
+          { stayOnUnclear: "initial" }
         );
+        return;
+      }
+
+      const initialQuickReplies = new Set(
+        getQuickReplies("initial").map((reply) => reply.toLowerCase())
+      );
+      const isGuidedStarter = initialQuickReplies.has(messageLower);
+
+      // Vague free text (not a guided quick reply) — ask to rephrase, do not recommend.
+      if (
+        !isGuidedStarter &&
+        message.trim().length >= 20 &&
+        !hasClearUsageIntent(message)
+      ) {
+        addBotMessage(UNCLEAR_INTENT_MESSAGE);
         return;
       }
 
@@ -264,7 +313,8 @@ export default function ChatWidget({
           budgetRange: budgetRangeFromLeadBudget(budget),
           query: `${message}. Orçamento: ${budget}`,
         },
-        { usage: message }
+        { usage: message },
+        { stayOnUnclear: "usage_discussion" }
       );
       return;
     }
@@ -343,8 +393,11 @@ export default function ChatWidget({
         {
           usage: message,
           budget: parseBudgetRange(message) ?? leadDataRef.current.budget,
-        }
+        },
+        { stayOnUnclear: leadDataRef.current.stage }
       );
+    } else if (message.trim().length >= 20) {
+      addBotMessage(UNCLEAR_INTENT_MESSAGE);
     } else {
       addBotMessage(
         "Posso aprofundar os critérios técnicos para você comparar melhor as opções — processador, memória, armazenamento, GPU, tela e autonomia. Sobre qual deles quer entender mais? Ou descreva de novo o que você precisa que eu busco no catálogo."

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatBudgetLabel,
   generateRecommendations,
+  hasClearUsageIntent,
   inferCategory,
   matchBudget,
 } from "@/lib/recommendations";
@@ -68,9 +69,27 @@ describe("inferCategory", () => {
     expect(inferCategory("design de jogos")).toBe("gaming");
   });
 
-  it("falls back to basic for unrelated text", () => {
+  it("falls back to basic for unrelated text via inferCategory", () => {
     expect(inferCategory("")).toBe("basic");
     expect(inferCategory("comprar um notebook qualquer")).toBe("basic");
+  });
+});
+
+describe("hasClearUsageIntent", () => {
+  it("is true for concrete notebook usage cues", () => {
+    expect(hasClearUsageIntent("quero jogar Fortnite")).toBe(true);
+    expect(hasClearUsageIntent("programação com docker")).toBe(true);
+    expect(hasClearUsageIntent("estudante de medicina")).toBe(true);
+    expect(hasClearUsageIntent("navegar na internet e office")).toBe(true);
+    expect(hasClearUsageIntent("Trabalho/Estudos")).toBe(true);
+    expect(hasClearUsageIntent("Design/Edição")).toBe(true);
+  });
+
+  it("is false for vague or unrelated text", () => {
+    expect(hasClearUsageIntent("i want to do a barbecue")).toBe(false);
+    expect(hasClearUsageIntent("Quero um Lenovo até R$ 4.000")).toBe(false);
+    expect(hasClearUsageIntent("olá tudo bem")).toBe(false);
+    expect(hasClearUsageIntent("")).toBe(false);
   });
 });
 

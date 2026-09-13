@@ -72,6 +72,29 @@ describe("POST /api/recommendations", () => {
     ).toBe(true);
   });
 
+  it("rejects a vague free-text query without recommending notebooks", async () => {
+    const res = await POST(
+      makeRequest({ query: "i want to do a barbecue" })
+    );
+
+    expect(res.status).toBe(422);
+    const data = await res.json();
+    expect(data.unclear).toBe(true);
+    expect(data.recommendations).toEqual([]);
+    expect(data.error).toMatch(/reformular|não entendi|nao entendi/i);
+  });
+
+  it("rejects brand/budget-only queries that lack usage criteria", async () => {
+    const res = await POST(
+      makeRequest({ query: "Quero um Lenovo até R$ 4.000 por favor" })
+    );
+
+    expect(res.status).toBe(422);
+    const data = await res.json();
+    expect(data.unclear).toBe(true);
+    expect(data.recommendations).toEqual([]);
+  });
+
   it("returns 500 when the body is not valid JSON", async () => {
     const res = await POST(makeRequest("{ not json", { raw: true }));
     expect(res.status).toBe(500);

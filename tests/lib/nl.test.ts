@@ -37,6 +37,7 @@ describe("parseNaturalLanguage", () => {
     expect(parsed.brand).toBe("Lenovo");
     expect(parsed.budgetDetected).toBe(true);
     expect(parsed.brandDetected).toBe(true);
+    expect(parsed.intentClear).toBe(true);
     expect(parsed.usage.toLowerCase()).toContain("gamer");
   });
 
@@ -44,6 +45,12 @@ describe("parseNaturalLanguage", () => {
     const parsed = parseNaturalLanguage("notebook para programação com docker");
     expect(parsed.budgetRange).toBe("4000-6000");
     expect(parsed.budgetDetected).toBe(false);
+    expect(parsed.intentClear).toBe(true);
+  });
+
+  it("marks vague or unrelated text as unclear intent", () => {
+    const parsed = parseNaturalLanguage("i want to do a barbecue");
+    expect(parsed.intentClear).toBe(false);
   });
 });
 
@@ -54,7 +61,16 @@ describe("looksLikeNeedDescription", () => {
     expect(looksLikeNeedDescription("Quero ajuda para escolher")).toBe(false);
   });
 
-  it("accepts longer need descriptions", () => {
+  it("rejects nonsense even when the message is long", () => {
+    expect(looksLikeNeedDescription("i want to do a barbecue with friends")).toBe(
+      false
+    );
+    expect(
+      looksLikeNeedDescription("Quero um Lenovo até R$ 4.000 por favor agora")
+    ).toBe(false);
+  });
+
+  it("accepts longer need descriptions with clear usage", () => {
     expect(
       looksLikeNeedDescription(
         "Preciso de um notebook para estudar engenharia com AutoCAD"

@@ -42,6 +42,8 @@ export interface RecommendationResponse {
   budgetDetected?: boolean;
   brandDetected?: boolean;
   interpretation?: string;
+  /** True when free-text query could not be mapped to notebook criteria. */
+  unclear?: boolean;
 }
 
 export interface ChatMessage {

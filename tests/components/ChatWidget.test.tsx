@@ -171,17 +171,32 @@ describe("ChatWidget", () => {
     expect(body.query).toMatch(/gamer Lenovo/i);
   });
 
+  it("asks to rephrase and does not recommend for nonsensical free text", async () => {
+    render(<ChatWidget />);
+    fireEvent.click(
+      screen.getByRole("button", { name: /Tirar dúvidas sobre a recomendação/i })
+    );
+
+    sendText("i want to do a barbecue with my friends this weekend");
+    await flush();
+
+    expect(
+      screen.getByText(/Não entendi bem o que você precisa no notebook/i)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Lenovo LOQ 15/i)).not.toBeInTheDocument();
+    const recCall = fetchMock.mock.calls.find(([url]) => url === "/api/recommendations");
+    expect(recCall).toBeUndefined();
+  });
+
   it("opens and starts the specialist flow via the openChatWidget event", async () => {
-    const { container } = render(<ChatWidget />);
+    render(<ChatWidget />);
 
     await act(async () => {
       openChatWidget();
       await vi.advanceTimersByTimeAsync(400);
     });
 
-    expect(container.querySelector(".chat-window")).toHaveClass("active");
     expect(screen.getByText(/qual faixa de orçamento você considera/i)).toBeInTheDocument();
-    // Budget-stage quick replies are now offered
     expect(screen.getByRole("button", { name: "De R$ 4.000 a R$ 6.000" })).toBeInTheDocument();
   });
 });

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { fetchNotebookCatalog } from "@/lib/notebooks";
-import { parseNaturalLanguage } from "@/lib/nl";
+import { parseNaturalLanguage, UNCLEAR_INTENT_MESSAGE } from "@/lib/nl";
 import {
   formatBudgetLabel,
   generateRecommendations,
+  hasClearUsageIntent,
 } from "@/lib/recommendations";
 import type { BudgetRange, RecommendationRequest } from "@/lib/types";
 
@@ -16,10 +17,10 @@ const VALID_BUDGETS: BudgetRange[] = [
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as Partial<RecommendationRequest>;
+    const queryText = body.query?.trim() || "";
+    const queryDriven = queryText.length > 0;
 
-    const parsed = body.query?.trim()
-      ? parseNaturalLanguage(body.query)
-      : null;
+    const parsed = queryDriven ? parseNaturalLanguage(queryText) : null;
 
     const usage = (body.usage?.trim() || parsed?.usage || "").trim();
     const budgetRange =
@@ -28,8 +29,7 @@ export async function POST(request: Request) {
         : null) ??
       parsed?.budgetRange ??
       null;
-    const brand =
-      body.brand?.trim() || parsed?.brand || undefined;
+    const brand = body.brand?.trim() || parsed?.brand || undefined;
 
     if (!usage) {
       return NextResponse.json(
@@ -38,6 +38,18 @@ export async function POST(request: Request) {
             "Descreva o que você precisa (uso) ou envie um campo usage.",
         },
         { status: 400 }
+      );
+    }
+
+    // Free-text query path: only recommend when usage maps to a real category.
+    if (queryDriven && !hasClearUsageIntent(usage)) {
+      return NextResponse.json(
+        {
+          error: UNCLEAR_INTENT_MESSAGE,
+          unclear: true,
+          recommendations: [],
+        },
+        { status: 422 }
       );
     }
 
